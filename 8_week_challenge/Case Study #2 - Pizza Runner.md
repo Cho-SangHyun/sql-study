@@ -117,6 +117,7 @@ VALUES
 ```
 
 ## Question & Solution 
+### A - Pizza Metrics
 1. How many pizzas were ordered?
 ```sql
 SELECT count(*) as order_count
@@ -264,3 +265,78 @@ ORDER BY order_day_of_the_week;
 | Saturday              | 5           |
 | Thursday              | 3           |
 | Wednesday             | 5           |
+
+### B - Runner and Customer Experience
+1. How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)
+```sql
+SELECT 
+    DATEDIFF(registration_date, '2021-01-01') DIV 7 + 1 as week_number, 
+    count(*) as runners_count
+FROM runners
+GROUP BY DATEDIFF(registration_date, '2021-01-01') DIV 7 + 1
+ORDER BY week_number;
+```
+| week_number | runners_count |
+| ----------- | ------------- |
+| 1           | 2             |
+| 2           | 1             |
+| 3           | 1             |
+2. What was the average time in minutes it took for each runner to arrive at the Pizza  Runner HQ to pickup the order?
+```sql
+SELECT 
+    runner_id, 
+    AVG(TIMESTAMPDIFF(MINUTE, order_time, pickup_time)) as average_time
+FROM customer_orders
+INNER JOIN runner_orders ON customer_orders.order_id = runner_orders.order_id
+WHERE pickup_time is not NULL
+GROUP BY runner_id
+ORDER BY runner_id;
+```
+| runner_id | average_time |
+| --------- | ------------ |
+| 1         | 15.3333      |
+| 2         | 23.4000      |
+| 3         | 10.0000      |
+3. Is there any relationship between the number of pizzas and how long the order takes to prepare?
+```sql
+WITH avg_prepare_time AS (
+    SELECT 
+        count(*) as pizza_count,
+        AVG(TIMESTAMPDIFF(MINUTE, order_time, pickup_time)) as prepare_time
+    FROM customer_orders
+    INNER JOIN runner_orders ON customer_orders.order_id = runner_orders.order_id
+    WHERE pickup_time is not NULL
+    GROUP BY customer_orders.order_id
+)
+
+SELECT pizza_count, AVG(prepare_time) as prepare_time
+FROM avg_prepare_time
+GROUP BY pizza_count
+ORDER BY pizza_count;
+```
+| pizza_count | prepare_time |
+| ----------- | ------------ |
+| 1           | 12.00000000  |
+| 2           | 18.00000000  |
+| 3           | 29.00000000  |
+4. What was the average distance travelled for each customer?
+```sql
+SELECT 
+    customer_id, 
+    AVG(CONVERT(REGEXP_REPLACE(distance, '[^0-9.]', ''), FLOAT)) AS average_distance
+FROM customer_orders
+INNER JOIN runner_orders ON customer_orders.order_id = runner_orders.order_id
+WHERE distance is not NULL
+GROUP BY customer_id
+ORDER BY customer_id;
+```
+| customer_id | average_distance |
+| ----------- | ---------------- |
+| 101         | 20               |
+| 102         | 16.733332951863606 |
+| 103         | 23.399999618530273 |
+| 104         | 10               |
+| 105         | 25               |
+5. What was the difference between the longest and shortest delivery times for all orders?
+6. What was the average speed for each runner for each delivery and do you notice any trend for these values?
+7. What is the successful delivery percentage for each runner?
