@@ -338,5 +338,55 @@ ORDER BY customer_id;
 | 104         | 10               |
 | 105         | 25               |
 5. What was the difference between the longest and shortest delivery times for all orders?
+```sql
+WITH delivery_times AS (
+  SELECT TIMESTAMPDIFF(MINUTE, order_time, pickup_time) as delivery_time
+  FROM customer_orders
+  INNER JOIN runner_orders ON customer_orders.order_id = runner_orders.order_id
+  WHERE order_time is not NULL AND pickup_time is not NULL
+)
+
+SELECT MAX(delivery_time) - MIN(delivery_time) as difference
+FROM delivery_times;
+```
+| difference  |
+| ----------- |
+| 19          |
 6. What was the average speed for each runner for each delivery and do you notice any trend for these values?
+```sql
+SELECT
+  runner_id,
+  AVG(
+    CONVERT(
+      CONVERT(REGEXP_REPLACE(distance, '[^0-9.]', ''), FLOAT)
+      / CONVERT(REGEXP_REPLACE(duration, '[^0-9]', ''), FLOAT),
+      DECIMAL(5, 3)
+    )
+  ) as avg_speed
+FROM runner_orders
+WHERE distance is not NULL and duration is not NULL
+GROUP BY runner_id
+ORDER BY runner_id;
+```
+| runner_id | avg_speed |
+| --------- | --------- |
+| 1         | 0.7590000 |
+| 2         | 1.0483333 |
+| 3         | 0.6670000 |
 7. What is the successful delivery percentage for each runner?
+```sql
+WITH delivery AS (
+  SELECT runner_id, IF(cancellation is NULL OR cancellation = '', 1, 0) as is_success
+  FROM runner_orders
+)
+
+SELECT runner_id, SUM(is_success) / count(*) as success_percentage
+FROM delivery
+GROUP BY runner_id
+ORDER BY runner_id;
+```
+| runner_id | success_percentage |
+| --------- | ------------------ |
+| 1         | 1.0000             |
+| 2         | 0.7500             |  
+| 3         | 0.5000             |
